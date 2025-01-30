@@ -723,6 +723,17 @@ export class EnviaProcessor {
                         }
                     }
                     break;
+                case '61':
+                    result = {
+                        ICMS60: <schema.TNFeInfNFeDetImpostoICMSICMS61>{
+                            orig: icms.orig,
+                            CST: icms.CST,
+                            qBCMonoRet: icms.qBCMonoRet,
+                            adRemICMSRet: icms.adRemICMSRet,
+                            vICMSMonoRet: icms.vICMSMonoRet,
+                        }
+                    }
+                    break;
                 case '70':
                     result = {
                         ICMS70: <schema.TNFeInfNFeDetImpostoICMSICMS70>{

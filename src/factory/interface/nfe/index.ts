@@ -144,6 +144,9 @@ export interface Imposto {
 export interface Icms {
     orig: string;
     CST: string;
+    qBCMonoRet: string;
+    adRemICMSRet: string;
+    vICMSMonoRet: string;
     modBC: string;
     pRedBC: string;
     vBC: string;
@@ -300,6 +303,8 @@ export interface IcmsTot {
     vOutro: string;
     vNF: string;
     vTotTrib: string;
+    qBCMonoRet: string;
+    vICMSMonoRet: string;
 }
 
 export interface IssqnTot {

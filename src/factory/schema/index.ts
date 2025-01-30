@@ -1112,6 +1112,20 @@ export enum TNFeInfNFeDetImpostoICMSICMS60CST {
 }
 
 //[System.Xml.Serialization.XmlTypeAttribute(AnonymousType=true, Namespace="http://www.portalfiscal.inf.br/nfe")]
+export interface TNFeInfNFeDetImpostoICMSICMS61 {
+    orig: Torig;
+    CST: TNFeInfNFeDetImpostoICMSICMS61CST;
+    qBCMonoRet: string;
+    adRemICMSRet: string;
+    vICMSMonoRet: string;
+}
+
+//[System.Xml.Serialization.XmlTypeAttribute(AnonymousType=true, Namespace="http://www.portalfiscal.inf.br/nfe")]
+export enum TNFeInfNFeDetImpostoICMSICMS61CST {
+    Item60 = "61",
+}
+
+//[System.Xml.Serialization.XmlTypeAttribute(AnonymousType=true, Namespace="http://www.portalfiscal.inf.br/nfe")]
 export interface TNFeInfNFeDetImpostoICMSICMS70 {
     orig: Torig;
     CST: TNFeInfNFeDetImpostoICMSICMS70CST;
@@ -2083,6 +2097,8 @@ export interface TNFeInfNFeTotalICMSTot {
     vOutro: string;
     vNF: string;
     vTotTrib: string;
+    qBCMonoRet: string;
+    vICMSMonoRet: string;
 }
 
 //[System.Xml.Serialization.XmlTypeAttribute(AnonymousType=true, Namespace="http://www.portalfiscal.inf.br/nfe")]
