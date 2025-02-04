@@ -725,7 +725,7 @@ export class EnviaProcessor {
                     break;
                 case '61':
                     result = {
-                        ICMS60: <schema.TNFeInfNFeDetImpostoICMSICMS61>{
+                        ICMS61: <schema.TNFeInfNFeDetImpostoICMSICMS61>{
                             orig: icms.orig,
                             CST: icms.CST,
                             qBCMonoRet: icms.qBCMonoRet,
