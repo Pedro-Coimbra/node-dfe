@@ -111,6 +111,7 @@ export interface DetalhesProduto {
 
     percentualDevolucao: number;
     valorIPIDevolucao: number;
+    comb: TNFeInfNFeDetProdComb;
     /*
     TODO: demais campos
     nVE: string[];
@@ -121,6 +122,39 @@ export interface DetalhesProduto {
     nFCI: string;
     rastro: TNFeInfNFeDetProdRastro[];
     */
+}
+
+export interface TNFeInfNFeDetProdComb {
+    cProdANP: string;
+    descANP: string;
+    pGLP: string;
+    pGNn: string;
+    pGNi: string;
+    vPart: string;
+    cODIF: string;
+    qTemp: string;
+    UFCons: string;
+    cIDE: TNFeInfNFeDetProdCombCIDE;
+    encerrante: TNFeInfNFeDetProdCombEncerrante;
+    origComb: TNFeInfNFeDetProdCombOrigComb
+}
+
+export interface TNFeInfNFeDetProdCombOrigComb {
+    indImport: string;
+    cUFOrig: string;
+    pOrig: string;
+}
+export interface TNFeInfNFeDetProdCombCIDE {
+    qBCProd: string;
+    vAliqProd: string;
+    vCIDE: string;
+}
+export interface TNFeInfNFeDetProdCombEncerrante {
+    nBico: string;
+    nBomba: string;
+    nTanque: string;
+    vEncIni: string;
+    vEncFin: string;
 }
 
 export interface impostoDevol {
@@ -334,7 +368,20 @@ export interface RetTrib {
 
 export interface Transporte {
     modalidateFrete: string;
+    volumes: TNFeInfNFeTranspVol[];
     //..
+}
+export interface TNFeInfNFeTranspVol {
+    qVol: string;
+    esp: string;
+    marca: string;
+    nVol: string;
+    pesoL: string;
+    pesoB: string;
+    lacres: TNFeInfNFeTranspVolLacres[];
+}
+export interface TNFeInfNFeTranspVolLacres {
+    nLacre: string;
 }
 
 export interface Cobranca {
@@ -451,7 +498,7 @@ export function fromJsonixObj<T>(json: any): T {
 export interface Geral {
     ambiente: string;
     versao: string;
-    modelo: string;    
+    modelo: string;
 }
 
 export interface Webservices {
@@ -476,6 +523,11 @@ export enum TipoEvento {
     epec = '110140',
 }
 
+export interface InfoIntermed {
+    cnpj: string;
+    idCadIntTran: string;
+}
+
 export interface Configuracoes {
     empresa: Empresa;
     webProxy?: WebProxy;
@@ -483,5 +535,6 @@ export interface Configuracoes {
     geral: Geral;
     webservices: Webservices;
     responsavelTecnico?: ResponsavelTecnico;
-    arquivos: Arquivos;
+	arquivos: Arquivos;
+	infoIntermed: InfoIntermed;
 }

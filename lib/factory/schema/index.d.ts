@@ -474,6 +474,7 @@ export interface TNFeInfNFeDetProd {
     nFCI: string;
     rastro: TNFeInfNFeDetProdRastro[];
     items: object[];
+    comb: TNFeInfNFeDetProdComb;
 }
 export declare enum TNFeInfNFeDetProdIndEscala {
     S = 0,
@@ -559,9 +560,15 @@ export interface TNFeInfNFeDetProdComb {
     vPart: string;
     cODIF: string;
     qTemp: string;
-    uFCons: TUf;
+    UFCons: TUf;
     cIDE: TNFeInfNFeDetProdCombCIDE;
     encerrante: TNFeInfNFeDetProdCombEncerrante;
+    origComb: TNFeInfNFeDetProdCombOrigComb
+}
+export interface TNFeInfNFeDetProdCombOrigComb {
+    indImport: string;
+    cUFOrig: string;
+    pOrig: string;
 }
 export interface TNFeInfNFeDetProdCombCIDE {
     qBCProd: string;

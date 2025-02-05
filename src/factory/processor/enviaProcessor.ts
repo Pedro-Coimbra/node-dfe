@@ -1,6 +1,10 @@
 import {
     RetornoProcessamentoNF, Empresa, Endereco, NFCeDocumento, NFeDocumento, DocumentoFiscal, Destinatario, Transporte, Pagamento, Produto, Total,
-    InfoAdicional, DetalhesProduto, Imposto, Icms, Cofins, Pis, IcmsTot, IssqnTot, DetalhePagamento, DetalhePgtoCartao, RetornoContingenciaOffline, ResponsavelTecnico, ServicosSefaz, II, PisST, Ipi, CofinsST, IcmsUfDest, impostoDevol, Configuracoes, Cobranca, Duplicata, NFeBase
+    InfoAdicional, DetalhesProduto, Imposto, Icms, Cofins, Pis, IcmsTot, IssqnTot, DetalhePagamento, DetalhePgtoCartao, RetornoContingenciaOffline, ResponsavelTecnico, ServicosSefaz, II, PisST, Ipi, CofinsST, IcmsUfDest, impostoDevol, Configuracoes, Cobranca, Duplicata, NFeBase,
+    TNFeInfNFeTranspVol,
+    InfoIntermed,
+    TNFeInfNFeDetProdComb,
+    TNFeInfNFeDetProdCombOrigComb
 } from '../interface/nfe';
 
 import { WebServiceHelper } from "../webservices/webserviceHelper";
@@ -355,12 +359,22 @@ export class EnviaProcessor {
         nfce.total = this.getTotal(documento.total);
         nfce.transp = this.getTransp(documento.transporte);
         nfce.pag = this.getPag(documento.pagamento);
+        if (this.configuracoes.infoIntermed)
+            nfce.infIntermed = this.getInfoIntermed(this.configuracoes.infoIntermed);
         nfce.infAdic = this.getInfoAdic(documento.infoAdicional);
 
         if (this.configuracoes.responsavelTecnico)
             nfce.infRespTec = this.getResponsavelTecnico(this.configuracoes.responsavelTecnico, dadosChave.chave);
 
         return nfce;
+    }
+
+    getInfoIntermed(respTec: InfoIntermed) {
+        const result: any = {
+            CNPJ: respTec.cnpj,
+            idCadIntTran: respTec.idCadIntTran,
+        }
+        return result;
     }
 
     private getIde(documento: DocumentoFiscal, dadosChave: any) {
@@ -382,6 +396,7 @@ export class EnviaProcessor {
             finNFe: Utils.getEnumByValue(schema.TFinNFe, documento.finalidadeEmissao),
             indFinal: Utils.getEnumByValue(schema.TNFeInfNFeIdeIndFinal, documento.indConsumidorFinal),
             indPres: Utils.getEnumByValue(schema.TNFeInfNFeIdeIndPres, documento.indPresenca),
+            indIntermed: documento.indIntermed ? Utils.getEnumByValue(schema.TNFeInfNFeIdeIndIntermed, documento.indIntermed) : null,
             procEmi: Utils.getEnumByValue(schema.TProcEmi, documento.processoEmissao),
             verProc: documento.versaoAplicativoEmissao,
             dhSaiEnt: documento.dhSaiEnt,
@@ -389,10 +404,6 @@ export class EnviaProcessor {
             xJust: documento.justificativaContingencia,
             //nFref: schema.TNFeInfNFeIdeNFref[],
         };
-
-        if (documento.indIntermed) {
-            ide.indIntermed = Utils.getEnumByValue(schema.TNFeInfNFeIdeIndIntermed, documento.indIntermed); // NT 2020.006
-        }
 
         return ide;
     }
@@ -509,6 +520,7 @@ export class EnviaProcessor {
             vDesc: produto.valorDesconto,
             vOutro: produto.valorOutro,
             indTot: produto.indicadorTotal,
+            comb: this.getComb(produto.comb),
             //di: TNFeInfNFeDetProdDI[];
             //detExport: TNFeInfNFeDetProdDetExport[];
             xPed: produto.numeroPedido,
@@ -516,11 +528,45 @@ export class EnviaProcessor {
             //nFCI: string;
             //rastro: TNFeInfNFeDetProdRastro[];
             //arma
-            //comb
             //med
             //nRECOPI
             //veicProd
         }
+    }
+
+    private getComb(combustivel: TNFeInfNFeDetProdComb) {
+
+        if (combustivel) {
+            let comb = <schema.TNFeInfNFeDetProdComb>{
+                cProdANP: combustivel.cProdANP,
+                descANP: combustivel.descANP,
+                pGLP: combustivel.pGLP,
+                pGNn: combustivel.pGNn,
+                pGNi: combustivel.pGNi,
+                vPart: combustivel.vPart,
+                cODIF: combustivel.cODIF,
+                qTemp: combustivel.qTemp,
+                UFCons: combustivel.UFCons,
+                cIDE: combustivel.cIDE,
+                encerrante: combustivel.encerrante,
+                origComb: this.getOrigComb(combustivel.origComb),
+            };
+            return comb;
+        } else return {}
+
+    }
+
+    private getOrigComb(origComb: TNFeInfNFeDetProdCombOrigComb) {
+
+        if (origComb) {
+            let comb = <schema.TNFeInfNFeDetProdCombOrigComb>{
+                indImport: origComb.indImport,
+                cUFOrig: origComb.cUFOrig,
+                pOrig: origComb.pOrig,
+            };
+            return comb;
+        } else return {}
+
     }
 
     private getDetImposto(imposto: Imposto, modelo: string, cfop: string) {
@@ -1267,14 +1313,10 @@ export class EnviaProcessor {
         }
     }
 
-    private getIcmsTot(icmsTot: IcmsTot) {
-        return icmsTot;
-
-    }
-
     private getTransp(transp: Transporte) {
         return <schema.TNFeInfNFeTransp>{
-            modFrete: transp.modalidateFrete
+            modFrete: transp.modalidateFrete,
+            vol: transp.volumes ? this.getVolTransp(transp.volumes) : {}
             /**
              * transporta: TNFeInfNFeTranspTransporta;
                 retTransp: TNFeInfNFeTranspRetTransp;
@@ -1284,9 +1326,24 @@ export class EnviaProcessor {
                 //veicTransp
                 items: object[];
                 itemsElementName: ItemsChoiceType5[];
-                vol: TNFeInfNFeTranspVol[];
             */
         }
+    }
+    private getVolTransp(volumes: TNFeInfNFeTranspVol[]) {
+        let listVol = [];
+        let vol;
+        for (const volume of volumes) {
+            vol = {
+                qVol: volume.qVol,
+                pesoL: volume.pesoL,
+                pesoB: volume.pesoB,
+                marca: volume.marca,
+                nVol: volume.nVol,
+                esp: volume.esp,
+            };
+            listVol.push(vol);
+        }
+        return listVol;
     }
 
     private getCobr(cobranca: Cobranca) {
