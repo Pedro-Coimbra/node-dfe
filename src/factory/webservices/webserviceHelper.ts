@@ -1,4 +1,4 @@
-import fetch, {Response} from 'node-fetch'
+import axios from 'axios'
 import * as https from 'https';
 import { XmlHelper } from '../xmlHelper'
 import { RetornoProcessamento } from '../interface/nfe'
@@ -64,9 +64,9 @@ export abstract class WebServiceHelper {
                 body: this.buildSoapEnvelope(xml, soap.method),
             }
 
-            const res = await fetch(soap.url, options);
+            const res = await axios(soap.url, options);
             result.status = res.status;
-            result.xml_recebido = await res.text();
+            result.xml_recebido = await res.data();
 
             if (result.status == 200) {
                 result.success = true;
