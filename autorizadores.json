@@ -220,8 +220,8 @@
                 "url_homologacao": "https://homologacao.nfe.fazenda.sp.gov.br/ws/cadconsultacadastro4.asmx"
             },
             "recepcaoEvento": {
-                "url_producao": "https://nfce.fazenda.sp.gov.br/ws/NFeRecepcaoEvento4.asmx",
-                "url_homologacao": "https://homologacao.nfce.fazenda.sp.gov.br/ws/NFeRecepcaoEvento4.asmx"
+                "url_producao": "https://nfe.fazenda.sp.gov.br/ws/nferecepcaoevento4.asmx",
+                "url_homologacao": "https://homologacao.nfe.fazenda.sp.gov.br/ws/nferecepcaoevento4.asmx"
             }
         }
     }
