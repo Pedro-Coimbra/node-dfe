@@ -17,6 +17,10 @@
             "inutilizacao": {
                 "url_producao": "https://nfce.sefaz.am.gov.br/nfce-services/services/NFeInutilizacao4",
                 "url_homologacao": "https://homnfce.sefaz.am.gov.br/nfce-services/services/NFeInutilizacao4.asmx?wsdl"
+            },
+            "recepcaoEvento": {
+                "url_producao": "https: //nfce.sefaz.am.gov.br/nfce-services/services/RecepcaoEvento4",
+                "url_homologacao": ""
             }
         }
     },
@@ -109,6 +113,10 @@
             "inutilizacao": {
                 "url_producao": "https://nfe.sefaz.ms.gov.br/ws/NFeInutilizacao4",
                 "url_homologacao": "https://hom.nfce.sefaz.ms.gov.br/ws/Nfeinutilizacao4.asmx"
+            },
+            "recepcaoEvento": {
+                "url_producao": "https://nfce.sefaz.ms.gov.br/ws/NFeRecepcaoEvento4",
+                "url_homologacao": ""
             }
         }
     },
