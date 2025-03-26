@@ -72,9 +72,13 @@ export abstract class WebServiceHelper {
                 result.success = true;
                 let retorno = XmlHelper.deserializeXml(result.xml_recebido, {explicitArray: false});
                 if (retorno) {
-                    result.data = Object(retorno)['soap:Envelope'] != undefined 
-                        ? Object(retorno)['soap:Envelope']['soap:Body']['nfeResultMsg'] 
-                        : Object(retorno)['env:Envelope']['env:Body']['nfeResultMsg'];
+                    if (Object(retorno)['soap:Envelope']) {
+                        result.data = Object(retorno)['soap:Envelope']['soap:Body']['nfeResultMsg'];
+                    } else if (Object(retorno)['S:Envelope']) {
+                        result.data = Object(retorno)['S:Envelope']['S:Body']['nfeResultMsg'];
+                    } else {
+                        result.data = Object(retorno)['env:Envelope']['env:Body']['nfeResultMsg'];
+                    }
                 }
             }
             return result;
