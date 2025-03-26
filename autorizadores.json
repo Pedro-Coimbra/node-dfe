@@ -59,6 +59,10 @@
             "inutilizacao": {
                 "url_producao": "https://nfe.sefaz.go.gov.br/nfe/services/NFeInutilizacao4",
                 "url_homologacao": "https://homolog.sefaz.go.gov.br/nfe/services/Nfeinutilizacao4.asmx"
+            },
+            "recepcaoEvento": {
+                "url_producao": "https://nfe.sefaz.go.gov.br/nfe/services/NFeRecepcaoEvento4?wsdl",
+                "url_homologacao": "https://nfce-homologacao.svrs.rs.gov.br/ws/recepcaoevento/recepcaoevento4.asmx"
             }
         }
     },
@@ -80,6 +84,10 @@
             "inutilizacao": {
                 "url_producao": "https://nfe.sefaz.mt.gov.br/nfews/v2/services/NfeInutilizacao4",
                 "url_homologacao": "https://homologacao.sefaz.mt.gov.br/nfcews/services/Nfeinutilizacao4.asmx"
+            },
+            "recepcaoEvento": {
+                "url_producao": "https://nfce.sefaz.mt.gov.br/nfcews/services/RecepcaoEvento4",
+                "url_homologacao": ""
             }
         }
     },
@@ -122,6 +130,10 @@
             "inutilizacao": {
                 "url_producao": "https://nfe.fazenda.mg.gov.br/nfe2/services/NFeInutilizacao4",
                 "url_homologacao": "https://hnfce.fazenda.mg.gov.br/nfce/services/Nfeinutilizacao4.asmx"
+            },
+            "recepcaoEvento": {
+                "url_producao": "https://nfce.fazenda.mg.gov.br/nfce/services/NFeRecepcaoEvento4",
+                "url_homologacao": ""
             }
         }
     },
@@ -188,7 +200,7 @@
             },
             "recepcaoEvento": {
                 "url_producao": "https://nfce.svrs.rs.gov.br/ws/recepcaoevento/recepcaoevento4.asmx",
-                "url_homologacao": "https://nfce-homologacao.svrs.rs.gov.br/ws/recepcaoevento/recepcaoevento4.asmx"
+                "url_homologacao": ""
             }
         }
     },
@@ -220,8 +232,8 @@
                 "url_homologacao": "https://homologacao.nfe.fazenda.sp.gov.br/ws/cadconsultacadastro4.asmx"
             },
             "recepcaoEvento": {
-                "url_producao": "https://nfce.fazenda.sp.gov.br/ws/NFeRecepcaoEvento4.asmx",
-                "url_homologacao": "https://homologacao.nfce.fazenda.sp.gov.br/ws/NFeRecepcaoEvento4.asmx"
+                "url_producao": "https://nfe.fazenda.sp.gov.br/ws/nferecepcaoevento4.asmx",
+                "url_homologacao": "https://homologacao.nfe.fazenda.sp.gov.br/ws/nferecepcaoevento4.asmx"
             }
         }
     }
