@@ -42,6 +42,10 @@
             "inutilizacao": {
                 "url_producao": "https://nfce.sefaz.ce.gov.br/nfce4/services/NFeInutilizacao4?WSDL",
                 "url_homologacao": "https://nfceh.sefaz.ce.gov.br/nfce4/services/NFeInutilizacao4?WSDL"
+            },
+            "recepcaoEvento": {
+                "url_producao": "https://nfce.sefaz.ce.gov.br/nfce4/services/NFeRecepcaoEvento4?WSDL",
+                "url_homologacao": "https://nfceh.sefaz.ce.gov.br/nfce4/services/NFeRecepcaoEvento4?WSDL"
             }
         }
     },
