@@ -81,7 +81,7 @@ export abstract class SefazNFCe {
 				case 'PA':
 					return { urlChave: 'www.sefa.pa.gov.br/nfce/consulta', urlQRCode: 'https://appnfc.sefa.pa.gov.br/portal/view/consultas/nfce/nfceForm.seam' };
 				case 'PB':
-					return { urlChave: 'www.receita.pb.gov.br/nfce/consulta', urlQRCode: 'http://www.receita.pb.gov.br/nfce' };
+					return { urlChave: 'www.sefaz.pb.gov.br/nfce/consulta', urlQRCode: 'http://www.sefaz.pb.gov.br/nfce' };
 				case 'PE':
 					return { urlChave: 'nfce.sefaz.pe.gov.br/nfce/consulta', urlQRCode: 'http://nfce.sefaz.pe.gov.br/nfce-web/consultarNFCe' };
 				case 'PI':
