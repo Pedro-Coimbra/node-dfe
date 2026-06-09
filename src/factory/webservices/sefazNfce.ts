@@ -65,7 +65,7 @@ export abstract class SefazNFCe {
 				case 'CE':
 					return { urlChave: 'www.sefaz.ce.gov.br/nfce/consulta', urlQRCode: 'http://nfce.sefaz.ce.gov.br/pages/ShowNFCe.html' };
 				case 'DF':
-					return { urlChave: 'www.fazenda.df.gov.br/nfce/consulta', urlQRCode: 'http://dec.fazenda.df.gov.br/ConsultarNFCe.aspx' };
+					return { urlChave: 'www.fazenda.df.gov.br/nfce/consulta', urlQRCode: 'http://www.fazenda.df.gov.br/nfce/qrcode' };
 				case 'ES':
 					return { urlChave: 'www.sefaz.es.gov.br/nfce/consulta', urlQRCode: 'http://app.sefaz.es.gov.br/ConsultaNFCe/qrcode.aspx' };
 				case 'GO':
@@ -122,11 +122,11 @@ export abstract class SefazNFCe {
 				case 'CE':
 					return { urlChave: 'www.sefaz.ce.gov.br/nfce/consulta', urlQRCode: 'http://nfceh.sefaz.ce.gov.br/pages/ShowNFCe.html' };
 				case 'DF':
-					return { urlChave: 'www.fazenda.df.gov.br/nfce/consulta', urlQRCode: 'http://dec.fazenda.df.gov.br/ConsultarNFCe.aspx' };
+					return { urlChave: 'www.fazenda.df.gov.br/nfce/consulta', urlQRCode: 'http://www.fazenda.df.gov.br/nfce/qrcode' };
 				case 'ES':
 					return { urlChave: 'www.sefaz.es.gov.br/nfce/consulta', urlQRCode: 'http://homologacao.sefaz.es.gov.br/ConsultaNFCe/qrcode.aspx' };
 				case 'GO':
-					return { urlChave: 'http://www.nfce.go.gov.br/post/ver/214413/consulta-nfc-e-homologacao', urlQRCode: 'http://homolog.sefaz.go.gov.br/nfeweb/sites/nfce/danfeNFCe' };
+					return { urlChave: 'www.sefaz.go.gov.br/nfce/consulta', urlQRCode: 'https://nfewebhomolog.sefaz.go.gov.br/nfeweb/sites/nfce/danfeNFCe' };
 				case 'MA':
 					return { urlChave: 'www.sefaz.ma.gov.br/nfce/consulta', urlQRCode: 'http://www.hom.nfce.sefaz.ma.gov.br/portal/consultarNFCe.jsp' };
 				case 'MG':
@@ -191,6 +191,5 @@ export abstract class SefazNFCe {
     }
 
 }
-
 
 
