@@ -70,7 +70,7 @@
             },
             "recepcaoEvento": {
                 "url_producao": "https://nfe.sefaz.go.gov.br/nfe/services/NFeRecepcaoEvento4?wsdl",
-                "url_homologacao": "https://nfce-homologacao.svrs.rs.gov.br/ws/recepcaoevento/recepcaoevento4.asmx"
+                "url_homologacao": "https://homolog.sefaz.go.gov.br/nfe/services/NFeRecepcaoEvento4"
             }
         }
     },
