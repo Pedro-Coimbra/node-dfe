@@ -14,6 +14,8 @@ export declare class EnviaProcessor {
     private configuraUrlsSefaz;
     private appendQRCodeXML;
     transmitirXml(xmlLote: string, nfeObj: Object): Promise<RetornoProcessamentoNF>;
+    private recuperarAutorizacao;
+    private consultarProtocolo;
     private enviarNF;
     private gerarXmlLote;
     private gerarXml;

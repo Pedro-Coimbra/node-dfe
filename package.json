@@ -5,6 +5,7 @@
   "main": "lib/index.js",
   "scripts": {
     "test": "npm run build && node test.js",
+    "test:unit": "node tests/enviaProcessor.test.js",
     "build": "tsc",
     "cxsd": "cxsd",
     "dev": "ts-node-dev --respawn ./src/index.ts"

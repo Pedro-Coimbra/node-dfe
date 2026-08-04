@@ -19,10 +19,6 @@ import * as path from 'path';
 
 const sha1 = require('sha1');
 
-let soapAutorizacao: any = null;
-let soapRetAutorizacao: any = null;
-
-
 function log(msg: string, processo?: string) {
     console.log(`[node-dfe][${processo || 'log'}]->${msg}`);
 }
@@ -75,12 +71,12 @@ export class EnviaProcessor {
         };
 
         try {
-            this.configuraUrlsSefaz();
+            const { soapAutorizacao } = this.configuraUrlsSefaz();
             let doc = this.gerarXml(documento);
             let xmlAssinado = Signature.signXmlX509(doc.xml, 'infNFe', this.configuracoes.certificado);
 
             if (documento.docFiscal.modelo == '65') {
-                let appendQRCode = this.appendQRCodeXML(documento as NFCeDocumento, xmlAssinado);
+                let appendQRCode = this.appendQRCodeXML(documento as NFCeDocumento, xmlAssinado, soapAutorizacao);
                 xmlAssinado = appendQRCode.xml;
                 doc.nfe.infNFeSupl = appendQRCode.qrCode;
             }
@@ -104,15 +100,14 @@ export class EnviaProcessor {
 
     private configuraUrlsSefaz() {
         const { geral: { modelo, ambiente }, empresa } = this.configuracoes;
-        if (!soapAutorizacao || !soapRetAutorizacao) {
-            let Sefaz = modelo == '65' ? SefazNFCe : SefazNFe;
+        let Sefaz = modelo == '65' ? SefazNFCe : SefazNFe;
+        const soapAutorizacao = Sefaz.getSoapInfo(empresa.endereco.uf, ambiente, ServicosSefaz.autorizacao);
+        const soapRetAutorizacao = Sefaz.getSoapInfo(empresa.endereco.uf, ambiente, ServicosSefaz.retAutorizacao);
 
-            soapAutorizacao = Sefaz.getSoapInfo(empresa.endereco.uf, ambiente, ServicosSefaz.autorizacao);
-            soapRetAutorizacao = Sefaz.getSoapInfo(empresa.endereco.uf, ambiente, ServicosSefaz.retAutorizacao);
-        }
+        return { soapAutorizacao, soapRetAutorizacao };
     }
 
-    private appendQRCodeXML(documento: NFCeDocumento, xmlAssinado: string) {
+    private appendQRCodeXML(documento: NFCeDocumento, xmlAssinado: string, soapAutorizacao: any) {
         let qrCode = null;
         let xmlAssinadoObj = XmlHelper.deserializeXml(xmlAssinado, { explicitArray: false });
 
@@ -156,9 +151,10 @@ export class EnviaProcessor {
                 result.nfe = Object(xmlObj).enviNFe.NFe;
             }
 
-            this.configuraUrlsSefaz();
+            const { soapAutorizacao } = this.configuraUrlsSefaz();
 
-            let retornoEnvio = await this.enviarNF(xmlLote);
+            let retornoEnvio = await this.enviarNF(xmlLote, soapAutorizacao);
+            result.envioNF = retornoEnvio;
 
             try {
                 log(jsonOneLevel({
@@ -177,7 +173,15 @@ export class EnviaProcessor {
                 if (data.retEnviNFe) {
                     retEnviNFe = data.retEnviNFe;
                 }
-            } else {
+            }
+
+            if (!retEnviNFe) {
+                const retornoRecuperado = await this.recuperarAutorizacao(xmlLote);
+                if (retornoRecuperado) {
+                    result.envioNF = retornoRecuperado;
+                    result.success = true;
+                    return result;
+                }
                 throw new Error('Erro ao realizar requisição');
             }
 
@@ -192,16 +196,72 @@ export class EnviaProcessor {
             // 106 Lote não localizado
             // 107 Serviço em Operação
 
-            result.envioNF = retornoEnvio;
+            result.success = true; // não está confirmada, mas houve sucesso na requisição de envio da nota
         } catch (ex: any) {
             result.success = false;
             result.error = ex;
         }
-        result.success = true; //nao esta confirmada, mas houve sucesso nessa requisicao de envio da nota
         return result;
     }
 
-    private async enviarNF(xml: string) {
+    private async recuperarAutorizacao(xmlLote: string) {
+        const { geral, webservices } = this.configuracoes;
+        if (geral.modelo !== '65') return null;
+
+        const chaveMatch = xmlLote.match(/<infNFe[^>]*\bId=["']NFe([0-9]{44})["']/);
+        if (!chaveMatch) return null;
+
+        const tentativas = webservices.tentativas || 3;
+        const aguardarConsultaRetorno = webservices.aguardarConsultaRetorno || 1000;
+
+        for (let tentativa = 0; tentativa < tentativas; tentativa++) {
+            await Utils.timeout(aguardarConsultaRetorno);
+            const consulta = await this.consultarProtocolo(chaveMatch[1]);
+            const retConsSitNFe = consulta && consulta.data
+                ? Object(consulta.data).retConsSitNFe
+                : null;
+            const infProt = retConsSitNFe && retConsSitNFe.protNFe
+                ? retConsSitNFe.protNFe.infProt
+                : null;
+
+            if (infProt && String(infProt.cStat) === '100') {
+                return {
+                    ...consulta,
+                    xml_enviado: xmlLote,
+                    data: {
+                        retEnviNFe: {
+                            cStat: '104',
+                            xMotivo: retConsSitNFe.xMotivo,
+                            protNFe: retConsSitNFe.protNFe
+                        }
+                    },
+                    consultaProtocolo: consulta
+                };
+            }
+
+            if (retConsSitNFe && String(retConsSitNFe.cStat) !== '217') break;
+        }
+
+        return null;
+    }
+
+    private async consultarProtocolo(chave: string) {
+        const { empresa, geral: { ambiente, modelo, versao }, webProxy, certificado } = this.configuracoes;
+        const Sefaz = modelo == '65' ? SefazNFCe : SefazNFe;
+        const soapConsultaProtocolo = Sefaz.getSoapInfo(empresa.endereco.uf, ambiente, ServicosSefaz.protocolo);
+        const xmlConsulta = XmlHelper.serializeXml({
+            $: { versao, xmlns: 'http://www.portalfiscal.inf.br/nfe' },
+            tpAmb: ambiente,
+            xServ: 'CONSULTAR',
+            chNFe: chave
+        }, 'consSitNFe');
+
+        return await WebServiceHelper.makeSoapRequest(
+            xmlConsulta, certificado, soapConsultaProtocolo, webProxy
+        );
+    }
+
+    private async enviarNF(xml: string, soapAutorizacao: any) {
         const { webProxy, certificado } = this.configuracoes
 
         return await WebServiceHelper.makeSoapRequest(
