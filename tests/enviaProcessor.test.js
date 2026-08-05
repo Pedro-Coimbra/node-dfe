@@ -2,6 +2,7 @@ const assert = require('assert');
 const { EnviaProcessor } = require('../lib/factory/processor/enviaProcessor');
 const { ServicosSefaz } = require('../lib/factory/interface/nfe');
 const { SefazNFCe } = require('../lib/factory/webservices/sefazNfce');
+const { XmlHelper } = require('../lib/factory/xmlHelper');
 
 const chave = '52260840156314000100650010000074981652432876';
 const xmlLote = `<enviNFe><NFe><infNFe Id="NFe${chave}"></infNFe></NFe></enviNFe>`;
@@ -111,8 +112,48 @@ function deveTerEndpointDeConsultaEmTodosOsAutorizadores() {
 	}
 }
 
+function deveGerarGrupoMonofasicoRetidoAnteriormente() {
+	const processor = new EnviaProcessor(criarConfiguracoes('MA'));
+	const imposto = processor.getImpostoIBSCBS({
+		CST: '620',
+		cClassTrib: '620006',
+		gIBSCBSMono: {
+			gMonoRet: {
+				qBCMonoRet: '13.0000',
+				adRemIBSRet: '0.0000',
+				vIBSMonoRet: '0.00',
+				adRemCBSRet: '0.0000',
+				vCBSMonoRet: '0.00',
+			},
+			vTotIBSMonoItem: '0.00',
+			vTotCBSMonoItem: '0.00',
+		},
+	});
+
+	assert.deepStrictEqual(imposto, {
+		CST: '620',
+		cClassTrib: '620006',
+		gIBSCBSMono: {
+			gMonoRet: {
+				qBCMonoRet: '13.0000',
+				adRemIBSRet: '0.0000',
+				vIBSMonoRet: '0.00',
+				adRemCBSRet: '0.0000',
+				vCBSMonoRet: '0.00',
+			},
+			vTotIBSMonoItem: '0.00',
+			vTotCBSMonoItem: '0.00',
+		},
+	});
+	assert.strictEqual(imposto.gIBSCBSMono.gMonoPadrao, undefined);
+	const xml = XmlHelper.serializeXml(imposto, 'IBSCBS');
+	assert.match(xml, /<gMonoRet><qBCMonoRet>13\.0000<\/qBCMonoRet>/);
+	assert.doesNotMatch(xml, /<gMonoPadrao>/);
+}
+
 Promise.resolve()
 	.then(deveTerEndpointDeConsultaEmTodosOsAutorizadores)
+	.then(deveGerarGrupoMonofasicoRetidoAnteriormente)
 	.then(deveRecuperarAutorizacaoAposRespostaIncerta)
 	.then(devePreservarEnvioQuandoNaoRecuperarAutorizacao)
 	.then(naoDeveConsultarProtocoloAposRejeicaoFiscal)
