@@ -12,12 +12,26 @@ export enum ServicosSefaz {
 
 export interface RetornoProcessamentoNF {
     success: boolean,
-    error: string,
+    error: any,
     nfe: Object,
     confirmada: boolean;
     envioNF: RetornoProcessamento,
+    reenvioNF?: RetornoProcessamento,
     consultaProc: RetornoProcessamento,
+    consultaProtocolo?: RetornoProcessamento,
+    tentativasConsultaProtocolo?: TentativaConsultaProtocolo[],
     retornoContingenciaOffline: RetornoContingenciaOffline
+}
+
+export interface TentativaConsultaProtocolo {
+    tentativa: number;
+    esperaMs: number;
+    success: boolean;
+    status?: number;
+    cStat?: string;
+    xMotivo?: string;
+    codigoErro?: string;
+    mensagemErro?: string;
 }
 
 export interface RetornoContingenciaOffline {
@@ -30,7 +44,7 @@ export interface RetornoProcessamento {
     status: number,
     success: boolean,
     data: Object,
-    error: string
+    error: any
 }
 
 export interface NFeBase {
@@ -504,6 +518,10 @@ export interface Geral {
 export interface Webservices {
     tentativas: number; // quantidade de tentativas a serem feitas, para evitar bloqueio por consumo indevido
     aguardarConsultaRetorno: number; //tempo em milisegundos
+    tentativasConsultaProtocolo?: number; // tentativas específicas para recuperar uma autorização com resposta incerta
+    aguardarConsultaProtocolo?: number; // espera inicial, em milissegundos, entre as consultas por protocolo
+    aguardarConsultaProtocoloMaximo?: number; // limite da espera progressiva entre consultas
+    retransmitirRespostaIncerta?: boolean; // retransmite uma vez o mesmo XML/chave quando a autorização continuar inconclusiva
 }
 
 export interface Arquivos {

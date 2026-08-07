@@ -19,6 +19,23 @@ import * as path from 'path';
 
 const sha1 = require('sha1');
 
+interface RecuperacaoAutorizacao {
+    chave: string | null;
+    envioNF: any | null;
+    reenvioNF: any | null;
+    ultimaConsulta: any | null;
+    tentativas: Array<{
+        tentativa: number;
+        esperaMs: number;
+        success: boolean;
+        status?: number;
+        cStat?: string;
+        xMotivo?: string;
+        codigoErro?: string;
+        mensagemErro?: string;
+    }>;
+}
+
 function log(msg: string, processo?: string) {
     console.log(`[node-dfe][${processo || 'log'}]->${msg}`);
 }
@@ -176,13 +193,25 @@ export class EnviaProcessor {
             }
 
             if (!retEnviNFe) {
-                const retornoRecuperado = await this.recuperarAutorizacao(xmlLote);
-                if (retornoRecuperado) {
-                    result.envioNF = retornoRecuperado;
+                const recuperacao = await this.recuperarAutorizacao(xmlLote);
+                result.reenvioNF = recuperacao.reenvioNF;
+                result.consultaProtocolo = recuperacao.ultimaConsulta;
+                result.tentativasConsultaProtocolo = recuperacao.tentativas;
+
+                if (recuperacao.envioNF) {
+                    result.envioNF = recuperacao.envioNF;
                     result.success = true;
                     return result;
                 }
-                throw new Error('Erro ao realizar requisição');
+
+                const mensagem = recuperacao.chave
+                    ? `Não foi possível confirmar a autorização da NFC-e ${recuperacao.chave} após ${recuperacao.tentativas.length} consulta(s) à SEFAZ.`
+                    : 'Não foi possível confirmar a autorização da NFC-e porque a chave não foi encontrada no XML enviado.';
+                const erro: any = new Error(mensagem);
+                erro.code = 'AUTORIZACAO_NAO_CONFIRMADA';
+                erro.chNFe = recuperacao.chave;
+                erro.tentativasConsultaProtocolo = recuperacao.tentativas;
+                throw erro;
             }
 
             // console.log(retEnviNFe && retEnviNFe.cStat == '104' && retEnviNFe.protNFe.infProt.cStat == '100');
@@ -204,28 +233,78 @@ export class EnviaProcessor {
         return result;
     }
 
-    private async recuperarAutorizacao(xmlLote: string) {
+    private async recuperarAutorizacao(xmlLote: string): Promise<RecuperacaoAutorizacao> {
         const { geral, webservices } = this.configuracoes;
-        if (geral.modelo !== '65') return null;
+        const recuperacao: RecuperacaoAutorizacao = {
+            chave: null,
+            envioNF: null,
+            reenvioNF: null,
+            ultimaConsulta: null,
+            tentativas: []
+        };
+
+        if (geral.modelo !== '65') return recuperacao;
 
         const chaveMatch = xmlLote.match(/<infNFe[^>]*\bId=["']NFe([0-9]{44})["']/);
-        if (!chaveMatch) return null;
+        if (!chaveMatch) return recuperacao;
 
-        const tentativas = webservices.tentativas || 3;
-        const aguardarConsultaRetorno = webservices.aguardarConsultaRetorno || 1000;
+        recuperacao.chave = chaveMatch[1];
 
-        for (let tentativa = 0; tentativa < tentativas; tentativa++) {
-            await Utils.timeout(aguardarConsultaRetorno);
+        const tentativas = Math.max(
+            1,
+            Number(webservices.tentativasConsultaProtocolo) || Math.max(Number(webservices.tentativas) || 3, 5)
+        );
+        const aguardarConsultaProtocolo = Math.max(
+            1,
+            Number(webservices.aguardarConsultaProtocolo) || Number(webservices.aguardarConsultaRetorno) || 1000
+        );
+        const aguardarConsultaProtocoloMaximo = Math.max(
+            aguardarConsultaProtocolo,
+            Number(webservices.aguardarConsultaProtocoloMaximo) || 5000
+        );
+        const retransmitirRespostaIncerta = webservices.retransmitirRespostaIncerta !== false;
+        const tentativaReenvio = Math.ceil(tentativas / 2);
+
+        for (let indice = 0; indice < tentativas; indice++) {
+            const esperaMs = Math.min(
+                aguardarConsultaProtocolo * (indice + 1),
+                aguardarConsultaProtocoloMaximo
+            );
+            await Utils.timeout(esperaMs);
+
             const consulta = await this.consultarProtocolo(chaveMatch[1]);
+            recuperacao.ultimaConsulta = consulta;
             const retConsSitNFe = consulta && consulta.data
                 ? Object(consulta.data).retConsSitNFe
                 : null;
             const infProt = retConsSitNFe && retConsSitNFe.protNFe
                 ? retConsSitNFe.protNFe.infProt
                 : null;
+            const cStat = retConsSitNFe && retConsSitNFe.cStat != null
+                ? String(retConsSitNFe.cStat)
+                : undefined;
+            const chaveProtocolo = infProt && infProt.chNFe != null
+                ? String(infProt.chNFe)
+                : null;
+            const erroConsulta = consulta && consulta.error ? consulta.error : null;
 
-            if (infProt && String(infProt.cStat) === '100') {
-                return {
+            recuperacao.tentativas.push({
+                tentativa: indice + 1,
+                esperaMs,
+                success: !!(consulta && consulta.success),
+                ...(consulta && consulta.status != null ? { status: consulta.status } : {}),
+                ...(cStat ? { cStat } : {}),
+                ...(retConsSitNFe && retConsSitNFe.xMotivo ? { xMotivo: String(retConsSitNFe.xMotivo) } : {}),
+                ...(erroConsulta && erroConsulta.code ? { codigoErro: String(erroConsulta.code) } : {}),
+                ...(erroConsulta && erroConsulta.message ? { mensagemErro: String(erroConsulta.message) } : {})
+            });
+
+            if (
+                infProt &&
+                String(infProt.cStat) === '100' &&
+                chaveProtocolo === chaveMatch[1]
+            ) {
+                recuperacao.envioNF = {
                     ...consulta,
                     xml_enviado: xmlLote,
                     data: {
@@ -237,15 +316,49 @@ export class EnviaProcessor {
                     },
                     consultaProtocolo: consulta
                 };
+                return recuperacao;
             }
 
-            if (retConsSitNFe && String(retConsSitNFe.cStat) !== '217') break;
+            if (infProt || (cStat && !['100', '105', '106', '108', '109', '217'].includes(cStat))) {
+                break;
+            }
+
+            if (retransmitirRespostaIncerta && indice + 1 === tentativaReenvio) {
+                const { soapAutorizacao } = this.configuraUrlsSefaz();
+                const reenvio = await this.enviarNF(xmlLote, soapAutorizacao);
+                recuperacao.reenvioNF = reenvio;
+
+                const retEnviNFe = reenvio && reenvio.data
+                    ? Object(reenvio.data).retEnviNFe
+                    : null;
+                const infProtReenvio = retEnviNFe && retEnviNFe.protNFe
+                    ? retEnviNFe.protNFe.infProt
+                    : null;
+                const cStatReenvio = infProtReenvio && infProtReenvio.cStat != null
+                    ? String(infProtReenvio.cStat)
+                    : null;
+                const chaveReenvio = infProtReenvio && infProtReenvio.chNFe != null
+                    ? String(infProtReenvio.chNFe)
+                    : null;
+
+                if (cStatReenvio === '100' && chaveReenvio === chaveMatch[1]) {
+                    recuperacao.envioNF = reenvio;
+                    return recuperacao;
+                }
+
+                // 204 indica que a mesma chave já foi recebida. A consulta por protocolo
+                // continua para recuperar a autorização original e montar o nfeProc.
+                if (infProtReenvio && cStatReenvio !== '204') {
+                    recuperacao.envioNF = reenvio;
+                    return recuperacao;
+                }
+            }
         }
 
-        return null;
+        return recuperacao;
     }
 
-    private async consultarProtocolo(chave: string) {
+    public async consultarProtocolo(chave: string) {
         const { empresa, geral: { ambiente, modelo, versao }, webProxy, certificado } = this.configuracoes;
         const Sefaz = modelo == '65' ? SefazNFCe : SefazNFe;
         const soapConsultaProtocolo = Sefaz.getSoapInfo(empresa.endereco.uf, ambiente, ServicosSefaz.protocolo);

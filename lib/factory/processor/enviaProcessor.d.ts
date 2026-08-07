@@ -15,7 +15,7 @@ export declare class EnviaProcessor {
     private appendQRCodeXML;
     transmitirXml(xmlLote: string, nfeObj: Object): Promise<RetornoProcessamentoNF>;
     private recuperarAutorizacao;
-    private consultarProtocolo;
+    consultarProtocolo(chave: string): Promise<any>;
     private enviarNF;
     private gerarXmlLote;
     private gerarXml;
