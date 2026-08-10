@@ -118,7 +118,7 @@ export class NFeProcessor {
                 return result;
             } else {
                 console.error('nfeProcessor.executar: Erro ao realizar requisição', result);
-                throw new Error('Erro ao realizar requisição');
+                throw result.error || new Error('Erro ao realizar requisição');
             }
         } catch (ex: any) {
             result.success = false;
@@ -138,6 +138,10 @@ export class NFeProcessor {
 
     public async processarXmlContingencia(xml: string) {
         return await this.enviaProcessor.transmitirXml(xml);
+    }
+
+    public async consultarProtocolo(chave: string) {
+        return await this.enviaProcessor.consultarProtocolo(chave);
     }
 
 }

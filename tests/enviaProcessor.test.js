@@ -1,5 +1,6 @@
 const assert = require('assert');
 const { EnviaProcessor } = require('../lib/factory/processor/enviaProcessor');
+const { NFeProcessor } = require('../lib/factory/processor/nfeProcessor2');
 const { ServicosSefaz } = require('../lib/factory/interface/nfe');
 const { SefazNFCe } = require('../lib/factory/webservices/sefazNfce');
 const { XmlHelper } = require('../lib/factory/xmlHelper');
@@ -7,11 +8,16 @@ const { XmlHelper } = require('../lib/factory/xmlHelper');
 const chave = '52260840156314000100650010000074981652432876';
 const xmlLote = `<enviNFe><NFe><infNFe Id="NFe${chave}"></infNFe></NFe></enviNFe>`;
 
-const criarConfiguracoes = (uf = 'GO', tentativas = 3) => ({
+const criarConfiguracoes = (uf = 'GO', tentativas = 3, webservices = {}) => ({
 	empresa: { endereco: { uf } },
 	certificado: {},
 	geral: { versao: '4.00', modelo: '65', ambiente: '1' },
-	webservices: { tentativas, aguardarConsultaRetorno: 1 }
+	webservices: {
+		tentativas,
+		aguardarConsultaRetorno: 1,
+		aguardarConsultaProtocoloMaximo: 1,
+		...webservices
+	}
 });
 
 const criarRetornoAutorizado = () => ({
@@ -61,7 +67,10 @@ async function deveRecuperarAutorizacaoAposRespostaIncerta() {
 }
 
 async function devePreservarEnvioQuandoNaoRecuperarAutorizacao() {
-	const processor = new EnviaProcessor(criarConfiguracoes('GO', 1));
+	const processor = new EnviaProcessor(criarConfiguracoes('GO', 1, {
+		tentativasConsultaProtocolo: 1,
+		retransmitirRespostaIncerta: false
+	}));
 	const retornoOriginal = {
 		success: false,
 		xml_enviado: xmlLote,
@@ -77,6 +86,153 @@ async function devePreservarEnvioQuandoNaoRecuperarAutorizacao() {
 
 	assert.strictEqual(result.success, false);
 	assert.strictEqual(result.envioNF, retornoOriginal);
+	assert.strictEqual(result.error.code, 'AUTORIZACAO_NAO_CONFIRMADA');
+	assert.strictEqual(result.tentativasConsultaProtocolo.length, 1);
+	assert.strictEqual(result.tentativasConsultaProtocolo[0].cStat, '217');
+}
+
+async function deveRetransmitirMesmoXmlQuandoAConsultaNaoEncontrarAChave() {
+	const processor = new EnviaProcessor(criarConfiguracoes('GO', 3, {
+		tentativasConsultaProtocolo: 4,
+		retransmitirRespostaIncerta: true
+	}));
+	let envios = 0;
+	processor.enviarNF = async xml => {
+		assert.strictEqual(xml, xmlLote);
+		envios++;
+		if (envios === 1) {
+			return {
+				success: false,
+				xml_enviado: xml,
+				error: Object.assign(new Error('conexão reiniciada'), { code: 'ECONNRESET' })
+			};
+		}
+		return {
+			...criarRetornoAutorizado(),
+			xml_enviado: xml,
+			data: {
+				retEnviNFe: {
+					cStat: '104',
+					protNFe: { infProt: { cStat: '100', chNFe: chave } }
+				}
+			}
+		};
+	};
+	processor.consultarProtocolo = async () => ({
+		success: true,
+		data: { retConsSitNFe: { cStat: '217', xMotivo: 'NF-e não consta' } }
+	});
+
+	const result = await processor.transmitirXml(xmlLote, {});
+
+	assert.strictEqual(result.success, true);
+	assert.strictEqual(envios, 2);
+	assert.strictEqual(result.envioNF, result.reenvioNF);
+	assert.strictEqual(result.envioNF.data.retEnviNFe.protNFe.infProt.cStat, '100');
+	assert.strictEqual(result.tentativasConsultaProtocolo.length, 2);
+}
+
+async function deveConsultarNovamenteAposDuplicidadeNoReenvio() {
+	const processor = new EnviaProcessor(criarConfiguracoes('GO', 3, {
+		tentativasConsultaProtocolo: 4,
+		retransmitirRespostaIncerta: true
+	}));
+	let envios = 0;
+	processor.enviarNF = async () => {
+		envios++;
+		if (envios === 1) {
+			return { success: false, xml_enviado: xmlLote, error: new Error('timeout') };
+		}
+		return {
+			success: true,
+			xml_enviado: xmlLote,
+			data: {
+				retEnviNFe: {
+					cStat: '104',
+					protNFe: { infProt: { cStat: '204', chNFe: chave, xMotivo: 'Duplicidade de NF-e' } }
+				}
+			}
+		};
+	};
+	let consultas = 0;
+	processor.consultarProtocolo = async () => {
+		consultas++;
+		if (consultas < 3) {
+			return {
+				success: true,
+				data: { retConsSitNFe: { cStat: '217', xMotivo: 'NF-e não consta' } }
+			};
+		}
+		return criarRetornoAutorizado();
+	};
+
+	const result = await processor.transmitirXml(xmlLote, {});
+
+	assert.strictEqual(result.success, true);
+	assert.strictEqual(envios, 2);
+	assert.strictEqual(consultas, 3);
+	assert.strictEqual(result.envioNF.data.retEnviNFe.protNFe.infProt.cStat, '100');
+}
+
+async function deveRegistrarFalhasTransitóriasDasConsultas() {
+	const processor = new EnviaProcessor(criarConfiguracoes('GO', 3, {
+		tentativasConsultaProtocolo: 3,
+		retransmitirRespostaIncerta: false
+	}));
+	const retornoOriginal = {
+		success: false,
+		xml_enviado: xmlLote,
+		error: Object.assign(new Error('conexão reiniciada'), { code: 'ECONNRESET' })
+	};
+	processor.enviarNF = async () => retornoOriginal;
+	processor.consultarProtocolo = async () => ({
+		success: false,
+		error: Object.assign(new Error('serviço indisponível'), { code: 'ECONNRESET' })
+	});
+
+	const result = await processor.transmitirXml(xmlLote, {});
+
+	assert.strictEqual(result.success, false);
+	assert.strictEqual(result.envioNF, retornoOriginal);
+	assert.strictEqual(result.error.code, 'AUTORIZACAO_NAO_CONFIRMADA');
+	assert.strictEqual(result.tentativasConsultaProtocolo.length, 3);
+	assert.deepStrictEqual(
+		result.tentativasConsultaProtocolo.map(tentativa => tentativa.codigoErro),
+		['ECONNRESET', 'ECONNRESET', 'ECONNRESET']
+	);
+	assert.strictEqual(result.consultaProtocolo.error.code, 'ECONNRESET');
+}
+
+async function devePreservarDiagnosticoNoNFeProcessor() {
+	const processor = new NFeProcessor(criarConfiguracoes('GO'));
+	const erroOriginal = Object.assign(new Error('Autorização não confirmada'), {
+		code: 'AUTORIZACAO_NAO_CONFIRMADA'
+	});
+	processor.enviaProcessor.executar = async () => ({
+		success: false,
+		envioNF: { success: false, xml_enviado: xmlLote },
+		tentativasConsultaProtocolo: [{ tentativa: 1, success: false }],
+		error: erroOriginal
+	});
+
+	const result = await processor.executar({});
+
+	assert.strictEqual(result.success, false);
+	assert.strictEqual(result.error, erroOriginal);
+	assert.strictEqual(result.error.code, 'AUTORIZACAO_NAO_CONFIRMADA');
+}
+
+async function deveExporConsultaDeProtocoloNoNFeProcessor() {
+	const processor = new NFeProcessor(criarConfiguracoes('GO'));
+	processor.enviaProcessor.consultarProtocolo = async chaveConsultada => ({
+		success: true,
+		chaveConsultada
+	});
+
+	const result = await processor.consultarProtocolo(chave);
+
+	assert.strictEqual(result.success, true);
+	assert.strictEqual(result.chaveConsultada, chave);
 }
 
 async function naoDeveConsultarProtocoloAposRejeicaoFiscal() {
@@ -156,6 +312,11 @@ Promise.resolve()
 	.then(deveGerarGrupoMonofasicoRetidoAnteriormente)
 	.then(deveRecuperarAutorizacaoAposRespostaIncerta)
 	.then(devePreservarEnvioQuandoNaoRecuperarAutorizacao)
+	.then(deveRetransmitirMesmoXmlQuandoAConsultaNaoEncontrarAChave)
+	.then(deveConsultarNovamenteAposDuplicidadeNoReenvio)
+	.then(deveRegistrarFalhasTransitóriasDasConsultas)
+	.then(devePreservarDiagnosticoNoNFeProcessor)
+	.then(deveExporConsultaDeProtocoloNoNFeProcessor)
 	.then(naoDeveConsultarProtocoloAposRejeicaoFiscal)
 	.then(() => console.log('Testes unitários do EnviaProcessor concluídos com sucesso.'))
 	.catch(error => {

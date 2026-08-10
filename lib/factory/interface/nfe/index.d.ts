@@ -10,12 +10,25 @@ export declare enum ServicosSefaz {
 }
 export interface RetornoProcessamentoNF {
     success: boolean;
-    error: string;
+    error: any;
     nfe: Object;
     confirmada: boolean;
     envioNF: RetornoProcessamento;
+    reenvioNF?: RetornoProcessamento;
     consultaProc: RetornoProcessamento;
+    consultaProtocolo?: RetornoProcessamento;
+    tentativasConsultaProtocolo?: TentativaConsultaProtocolo[];
     retornoContingenciaOffline: RetornoContingenciaOffline;
+}
+export interface TentativaConsultaProtocolo {
+    tentativa: number;
+    esperaMs: number;
+    success: boolean;
+    status?: number;
+    cStat?: string;
+    xMotivo?: string;
+    codigoErro?: string;
+    mensagemErro?: string;
 }
 export interface RetornoContingenciaOffline {
     xml_gerado: string;
@@ -26,7 +39,7 @@ export interface RetornoProcessamento {
     status: number;
     success: boolean;
     data: Object;
-    error: string;
+    error: any;
 }
 export interface NFeBase {
     docFiscal: DocumentoFiscal;
@@ -396,6 +409,10 @@ export interface Geral {
 export interface Webservices {
     tentativas: number;
     aguardarConsultaRetorno: number;
+    tentativasConsultaProtocolo?: number;
+    aguardarConsultaProtocolo?: number;
+    aguardarConsultaProtocoloMaximo?: number;
+    retransmitirRespostaIncerta?: boolean;
 }
 export interface Arquivos {
     salvar: boolean;
