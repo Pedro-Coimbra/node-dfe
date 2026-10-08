@@ -26,6 +26,39 @@ function proxyToUrl(pr: WebProxy): string {
 
 export abstract class WebServiceHelper {
 
+    private static getByLocalName(value: any, localName: string): any {
+        if (!value || typeof value !== 'object') return undefined;
+        const key = Object.keys(value).find(currentKey => currentKey.split(':').pop() === localName);
+        return key ? value[key] : undefined;
+    }
+
+    private static findByLocalName(value: any, localName: string): any {
+        if (!value || typeof value !== 'object') return undefined;
+
+        const directValue = this.getByLocalName(value, localName);
+        if (directValue !== undefined) return directValue;
+
+        for (const child of Object.values(value)) {
+            const result = this.findByLocalName(child, localName);
+            if (result !== undefined) return result;
+        }
+
+        return undefined;
+    }
+
+    public static extractSoapResult(retorno: any): any {
+        const envelope = this.getByLocalName(retorno, 'Envelope');
+        if (!envelope) throw new Error('Resposta SOAP inválida: Envelope não encontrado.');
+
+        const body = this.getByLocalName(envelope, 'Body');
+        if (!body) throw new Error('Resposta SOAP inválida: Body não encontrado.');
+
+        const result = this.findByLocalName(body, 'nfeResultMsg');
+        if (result === undefined) throw new Error('Resposta SOAP inválida: nfeResultMsg não encontrado.');
+
+        return result;
+    }
+
     public static buildSoapEnvelope(xml: string, soapMethod: string) {
         let soapEnvelopeObj = {
             '$': { 'xmlns:soap': 'http://www.w3.org/2003/05/soap-envelope',
@@ -72,13 +105,7 @@ export abstract class WebServiceHelper {
                 result.success = true;
                 let retorno = XmlHelper.deserializeXml(result.xml_recebido, {explicitArray: false});
                 if (retorno) {
-                    if (Object(retorno)['soap:Envelope']) {
-                        result.data = Object(retorno)['soap:Envelope']['soap:Body']['nfeResultMsg'];
-                    } else if (Object(retorno)['S:Envelope']) {
-                        result.data = Object(retorno)['S:Envelope']['S:Body']['nfeResultMsg'];
-                    } else {
-                        result.data = Object(retorno)['env:Envelope']['env:Body']['nfeResultMsg'];
-                    }
+                    result.data = this.extractSoapResult(retorno);
                 }
             }
             return result;

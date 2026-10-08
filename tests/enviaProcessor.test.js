@@ -3,6 +3,7 @@ const { EnviaProcessor } = require('../lib/factory/processor/enviaProcessor');
 const { NFeProcessor } = require('../lib/factory/processor/nfeProcessor2');
 const { ServicosSefaz } = require('../lib/factory/interface/nfe');
 const { SefazNFCe } = require('../lib/factory/webservices/sefazNfce');
+const { WebServiceHelper } = require('../lib/factory/webservices/webserviceHelper');
 const { XmlHelper } = require('../lib/factory/xmlHelper');
 
 const chave = '52260840156314000100650010000074981652432876';
@@ -307,7 +308,23 @@ function deveGerarGrupoMonofasicoRetidoAnteriormente() {
 	assert.doesNotMatch(xml, /<gMonoPadrao>/);
 }
 
+function deveInterpretarRespostaSoapIndependentementeDoPrefixo() {
+	const prefixes = ['soap', 'S', 'env', 'soapenv', 'soap12'];
+	for (const prefix of prefixes) {
+		const retorno = XmlHelper.deserializeXml(
+			`<${prefix}:Envelope xmlns:${prefix}="http://www.w3.org/2003/05/soap-envelope"><${prefix}:Body><nfe:nfeConsultaNFResponse xmlns:nfe="http://www.portalfiscal.inf.br/nfe/wsdl/NFeConsultaProtocolo4"><nfe:nfeResultMsg><retConsSitNFe><cStat>100</cStat><protNFe><infProt><chNFe>${chave}</chNFe></infProt></protNFe></retConsSitNFe></nfe:nfeResultMsg></nfe:nfeConsultaNFResponse></${prefix}:Body></${prefix}:Envelope>`,
+			{ explicitArray: false }
+		);
+
+		const data = WebServiceHelper.extractSoapResult(retorno);
+
+		assert.strictEqual(data.retConsSitNFe.cStat, '100');
+		assert.strictEqual(data.retConsSitNFe.protNFe.infProt.chNFe, chave);
+	}
+}
+
 Promise.resolve()
+	.then(deveInterpretarRespostaSoapIndependentementeDoPrefixo)
 	.then(deveTerEndpointDeConsultaEmTodosOsAutorizadores)
 	.then(deveGerarGrupoMonofasicoRetidoAnteriormente)
 	.then(deveRecuperarAutorizacaoAposRespostaIncerta)
